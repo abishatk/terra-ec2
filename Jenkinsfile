@@ -10,45 +10,25 @@ pipeline {
 
    agent  any
     stages {
-        stage('checkout') {
+        stage('Checkout') {
             steps {
-                 script{
-                        dir("terraform")
-                        {
-                            git "https://github.com/abishatk/terra-ec2.git"
-                        }
-                    }
-                }
+                checkout([$class: 'GitSCM', branches: [[name: '*/master']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'github', url: 'https://github.com/abishatk/terra-ec2.git']]])
             }
+        }
 
         stage('Plan') {
             steps {
-                bat 'pwd;cd terraform/ ; terraform init'
-                bat 'pwd;cd terraform/ ; terraform plan -out tfplan'
-                bat 'pwd;cd terraform/ ; terraform show -no-color tfplan > tfplan.txt'
+                bat 'terraform init'
+                bat " terraform plan -out tfplan"
+        
             }
         }
-        stage('Approval') {
-           when {
-               not {
-                   equals expected: true, actual: params.autoApprove
-               }
-           }
-
-           steps {
-               script {
-                    def plan = readFile 'terraform/tfplan.txt'
-                    input message: "Do you want to apply the plan?",
-                    parameters: [text(name: 'Plan', description: 'Please review the plan', defaultValue: plan)]
-               }
-           }
-       }
+        
 
         stage('Apply') {
             steps {
-                bat "pwd;cd terraform/ ; terraform apply -input=false tfplan"
+                bat "terraform apply --auto-approve"
             }
         }
+}
     }
-
-  }
